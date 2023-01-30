@@ -142,16 +142,6 @@ func showComicInfo(_ context.Context, args []string) error {
 	return fmt.Errorf("no ComicInfo.xml file found")
 }
 
-func printXml(info *ComicInfo) error {
-	marshal, err := xml.MarshalIndent(&info, "", " ")
-	if err != nil {
-		return fmt.Errorf("failed to XML marshal ComicInfo.xml: %w", err)
-	}
-
-	fmt.Println(string(marshal))
-	return nil
-}
-
 func setComicInfoField(_ context.Context, args []string) error {
 	zipFileName := args[len(args)-1]
 	args = args[:len(args)-1]
@@ -197,16 +187,15 @@ func outputCbzName(sourcePath string) string {
 // Action performs an action on a ComicInfo, such as printing a value, setting a value, or removing a value.
 type Action func(info *ComicInfo) error
 
-// join many actions together into a single action
-func join(actions []Action) Action {
-	return func(info *ComicInfo) error {
-		for _, action := range actions {
-			if err := action(info); err != nil {
-				return fmt.Errorf("failed applying action: %w", err)
-			}
-		}
-		return nil
+// printXml prints the ComicInfo.xml to stdout
+func printXml(info *ComicInfo) error {
+	marshal, err := xml.MarshalIndent(&info, "", " ")
+	if err != nil {
+		return fmt.Errorf("failed to XML marshal ComicInfo.xml: %w", err)
 	}
+
+	fmt.Println(string(marshal))
+	return nil
 }
 
 // setField overwrites the value of a named field in a ComicInfo.
@@ -224,6 +213,18 @@ func setField(name string, value any) Action {
 			f.SetBool(v)
 		default:
 			return fmt.Errorf("unsupported data type: %v", v)
+		}
+		return nil
+	}
+}
+
+// join many actions together into a single action
+func join(actions []Action) Action {
+	return func(info *ComicInfo) error {
+		for _, action := range actions {
+			if err := action(info); err != nil {
+				return fmt.Errorf("failed applying action: %w", err)
+			}
 		}
 		return nil
 	}
