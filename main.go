@@ -119,7 +119,7 @@ func setComicInfoField(_ context.Context, args []string) error {
 
 			info, err := readComicInfo(file)
 
-			updater := SetField(nameAndValue[0], nameAndValue[1])
+			updater := setField(nameAndValue[0], nameAndValue[1])
 			updater(info)
 
 			marshal, err := xml.MarshalIndent(&info, "", " ")
@@ -136,7 +136,7 @@ func setComicInfoField(_ context.Context, args []string) error {
 
 type FieldUpdater func(info *ComicInfo) error
 
-func SetField(name string, value string) FieldUpdater {
+func setField(name string, value string) FieldUpdater {
 	return func(info *ComicInfo) error {
 		rv := reflect.Indirect(reflect.ValueOf(info))
 		f := rv.FieldByName(name)
