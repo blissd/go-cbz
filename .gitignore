@@ -13,3 +13,9 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# IntelliJ
+.idea/
+
+# File for adhoc testing
+comic.cbz
