@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/peterbourgon/ff/v3/ffcli"
+	"io"
 	"log"
 	"os"
 	"reflect"
@@ -50,8 +51,79 @@ func main() {
 	}
 }
 
-func pipeline(zipFileName string, action Action) error {
+// process applies a series of actions to files in a zip archive.
+func process(zipFileName string, action Action) error {
 	input, err := zip.OpenReader(zipFileName)
+	if err != nil {
+		return fmt.Errorf("failed to open input file: %w", err)
+	}
+	defer input.Close()
+
+	output, err := os.Create("out.cbz")
+	if err != nil {
+		return fmt.Errorf("failed to open output file: %w", err)
+	}
+	defer output.Close()
+
+	outputZip := zip.NewWriter(output)
+	defer outputZip.Close()
+
+	for _, file := range input.File {
+		w, err := outputZip.Create(file.Name)
+		if err != nil {
+			return fmt.Errorf("failed creating file in zip archive: %w", err)
+		}
+
+		if file.Name == "ComicInfo.xml" {
+			if err != nil {
+				return fmt.Errorf("failed to show ComicInfo.xml: %w", err)
+			}
+
+			info, err := unmarshallComicInfoXml(file)
+			if err != nil {
+				return fmt.Errorf("failed to unmarshal ComicInfo.xml: %w", err)
+			}
+
+			err = action(info)
+			if err != nil {
+				return fmt.Errorf("failed to apply action to ComicInfo.xml: %w", err)
+			}
+
+			bs, err := xml.MarshalIndent(info, "", "  ")
+			if err != nil {
+				return fmt.Errorf("failed to marshal ComicInfo.xml: %w", err)
+			}
+
+			if _, err = w.Write(bs); err != nil {
+				return fmt.Errorf("failed to write ComicInfo.xml: %w", err)
+			}
+		} else {
+			err = copyFile(w, file)
+			if err != nil {
+				return fmt.Errorf("failed to add %s: %w", file.Name, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+func copyFile(w io.Writer, src *zip.File) error {
+	r, err := src.Open()
+	if err != nil {
+		return fmt.Errorf("failed to open %s: %w", src.Name, err)
+	}
+	defer r.Close()
+
+	_, err = io.Copy(w, r)
+	if err != nil {
+		return fmt.Errorf("failed to copy %s: %w", src.Name, err)
+	}
+	return nil
+}
+
+func showComicInfo(_ context.Context, args []string) error {
+	input, err := zip.OpenReader(args[0])
 	if err != nil {
 		log.Fatalln("Failed to open file:", err)
 	}
@@ -64,18 +136,15 @@ func pipeline(zipFileName string, action Action) error {
 			}
 
 			info, err := unmarshallComicInfoXml(file)
-			err = action(info)
+			err = printXml(info)
 			if err != nil {
 				return fmt.Errorf("failed to apply action to ComicInfo.xml: %w", err)
 			}
+			return nil // early
 		}
 	}
 
-	return nil
-}
-
-func showComicInfo(_ context.Context, args []string) error {
-	return pipeline(args[0], printXml)
+	return fmt.Errorf("no ComicInfo.xml file found")
 }
 
 func printXml(info *ComicInfo) error {
@@ -103,7 +172,7 @@ func setComicInfoField(_ context.Context, args []string) error {
 
 	actions = append(actions, printXml)
 
-	return pipeline(zipFileName, join(actions))
+	return process(zipFileName, join(actions))
 }
 
 // Action performs an action on a ComicInfo, such as printing a value, setting a value, or removing a value.
