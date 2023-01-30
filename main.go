@@ -84,6 +84,11 @@ func process(zipFileName string, action Action, output io.Writer) error {
 				return fmt.Errorf("failed to apply action to ComicInfo.xml: %w", err)
 			}
 
+			err = info.validate()
+			if err != nil {
+				return fmt.Errorf("failed to produce a valid ComicInfo.xml: %w", err)
+			}
+
 			bs, err := xml.MarshalIndent(info, "", "  ")
 			if err != nil {
 				return fmt.Errorf("failed to marshal ComicInfo.xml: %w", err)
@@ -145,13 +150,13 @@ func showComicInfo(_ context.Context, args []string) error {
 func setComicInfoField(_ context.Context, args []string) error {
 	zipFileName := args[len(args)-1]
 	args = args[:len(args)-1]
-	actions := make([]Action, len(args), len(args)+1) // leave space for (optional) printXml action
+	actions := make([]Action, len(args), len(args)+2) // leave space for validate and (optional) printXml actions
 	for i, v := range args {
 		nameAndValue := strings.Split(v, "=")
 		actions[i] = setField(nameAndValue[0], nameAndValue[1])
 	}
 
-	actions = append(actions, printXml) // TODO only add this action with a -v "verbose" flag
+	actions = append(actions, validate, printXml) // TODO only add this action with a -v "verbose" flag
 
 	updatedZip, err := os.CreateTemp(filepath.Dir(zipFileName), filepath.Base(zipFileName))
 	if err != nil {
@@ -216,6 +221,10 @@ func setField(name string, value any) Action {
 		}
 		return nil
 	}
+}
+
+func validate(info *ComicInfo) error {
+	return info.validate()
 }
 
 // join many actions together into a single action
