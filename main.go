@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -27,7 +28,7 @@ func main() {
 	metaSet := &ffcli.Command{
 		Name:       "set",
 		ShortUsage: "cbz meta set <field=value> <comic.cbz>",
-		ShortHelp:  "Set an field value. e.g., cbz meta set AgeRating=M",
+		ShortHelp:  "Set an field value. e.g., cbz meta set AgeRating=M comic.cbz",
 		Exec:       setComicInfoField,
 	}
 
@@ -147,13 +148,54 @@ func showComicInfo(_ context.Context, args []string) error {
 	return fmt.Errorf("no ComicInfo.xml file found")
 }
 
+var intFieldNames = []string{
+	"Count",
+	"Volume",
+	"AlternativeCount",
+	"Year",
+	"Month",
+	"Day",
+	"PageCount",
+}
+
+var floatFieldNames = []string{
+	"CommunityRating",
+}
+var boolFieldNames = []string{
+	"DoublePage",
+}
+
+func convertFieldValue(name string, value string) (any, error) {
+	for _, n := range intFieldNames {
+		if n == name {
+			return strconv.ParseInt(value, 10, 64)
+		}
+	}
+	for _, n := range floatFieldNames {
+		if n == name {
+			return strconv.ParseFloat(value, 32)
+		}
+	}
+	for _, n := range boolFieldNames {
+		if n == name {
+			return strconv.ParseBool(value)
+		}
+	}
+	return value, nil
+}
+
 func setComicInfoField(_ context.Context, args []string) error {
 	zipFileName := args[len(args)-1]
 	args = args[:len(args)-1]
 	actions := make([]Action, len(args), len(args)+2) // leave space for validate and (optional) printXml actions
+
 	for i, v := range args {
 		nameAndValue := strings.Split(v, "=")
-		actions[i] = setField(nameAndValue[0], nameAndValue[1])
+		typedValue, err := convertFieldValue(nameAndValue[0], nameAndValue[1])
+		if err != nil {
+			return fmt.Errorf("field %s has invalid value %s: %w", nameAndValue[0], nameAndValue[1], err)
+		}
+		actions[i] = setField(nameAndValue[0], typedValue)
 	}
 
 	actions = append(actions, validate, printXml) // TODO only add this action with a -v "verbose" flag
@@ -173,7 +215,7 @@ func setComicInfoField(_ context.Context, args []string) error {
 	// Success, so replace original file with updated file.
 	updatedZip.Close()
 
-	os.Rename(updatedZip.Name(), outputCbzName(zipFileName))
+	os.Rename(updatedZip.Name(), zipFileName)
 	if err != nil {
 		return fmt.Errorf("failed moving file: %w", err)
 	}
@@ -214,10 +256,12 @@ func setField(name string, value any) Action {
 			f.SetString(v)
 		case int64:
 			f.SetInt(v)
+		case float64:
+			f.SetFloat(v)
 		case bool:
 			f.SetBool(v)
 		default:
-			return fmt.Errorf("unsupported data type: %v", v)
+			return fmt.Errorf("field %s has unsupported data type: %v", name, v)
 		}
 		return nil
 	}

@@ -65,7 +65,7 @@ func (v Manga) validate() error {
 	return nil
 }
 
-type Rating float32
+type Rating float64
 
 type ComicPageType string
 
@@ -106,16 +106,16 @@ type ComicInfo struct {
 	Title               string               `xml:",omitempty"`
 	Series              string               `xml:",omitempty"`
 	Number              string               `xml:",omitempty"`
-	Count               int                  `xml:",omitempty"`
-	Volume              int                  `xml:",omitempty"`
+	Count               int64                `xml:",omitempty"`
+	Volume              int64                `xml:",omitempty"`
 	AlternativeSeries   string               `xml:",omitempty"`
 	AlternativeNumber   string               `xml:",omitempty"`
-	AlternativeCount    int                  `xml:",omitempty"`
+	AlternativeCount    int64                `xml:",omitempty"`
 	Summary             string               `xml:",omitempty"`
 	Notes               string               `xml:",omitempty"`
-	Year                int                  `xml:",omitempty"`
-	Month               int                  `xml:",omitempty"`
-	Day                 int                  `xml:",omitempty"`
+	Year                int64                `xml:",omitempty"`
+	Month               int64                `xml:",omitempty"`
+	Day                 int64                `xml:",omitempty"`
 	Writer              string               `xml:",omitempty"`
 	Penciller           string               `xml:",omitempty"`
 	Inker               string               `xml:",omitempty"`
@@ -127,7 +127,7 @@ type ComicInfo struct {
 	Imprint             string               `xml:",omitempty"`
 	Genre               string               `xml:",omitempty"`
 	Web                 string               `xml:",omitempty"`
-	PageCount           int                  `xml:",omitempty"`
+	PageCount           int64                `xml:",omitempty"`
 	LanguageISO         string               `xml:",omitempty"`
 	Format              string               `xml:",omitempty"`
 	BlackAndWhite       YesNo                `xml:",omitempty"`
