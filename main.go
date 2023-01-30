@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 )
@@ -52,18 +53,12 @@ func main() {
 }
 
 // process applies a series of actions to files in a zip archive.
-func process(zipFileName string, action Action) error {
+func process(zipFileName string, action Action, output io.Writer) error {
 	input, err := zip.OpenReader(zipFileName)
 	if err != nil {
 		return fmt.Errorf("failed to open input file: %w", err)
 	}
 	defer input.Close()
-
-	output, err := os.Create("out.cbz")
-	if err != nil {
-		return fmt.Errorf("failed to open output file: %w", err)
-	}
-	defer output.Close()
 
 	outputZip := zip.NewWriter(output)
 	defer outputZip.Close()
@@ -158,26 +153,51 @@ func printXml(info *ComicInfo) error {
 }
 
 func setComicInfoField(_ context.Context, args []string) error {
-	fmt.Println("meta set:", args)
-
 	zipFileName := args[len(args)-1]
 	args = args[:len(args)-1]
 	actions := make([]Action, len(args), len(args)+1) // leave space for (optional) printXml action
 	for i, v := range args {
-		fmt.Println(v)
 		nameAndValue := strings.Split(v, "=")
-		fmt.Println("split:", nameAndValue)
 		actions[i] = setField(nameAndValue[0], nameAndValue[1])
 	}
 
-	actions = append(actions, printXml)
+	actions = append(actions, printXml) // TODO only add this action with a -v "verbose" flag
 
-	return process(zipFileName, join(actions))
+	updatedZip, err := os.CreateTemp(filepath.Dir(zipFileName), filepath.Base(zipFileName))
+	if err != nil {
+		return fmt.Errorf("failed creating temporary file: %w", err)
+	}
+
+	err = process(zipFileName, join(actions), updatedZip)
+	if err != nil {
+		updatedZip.Close()
+		os.Remove(updatedZip.Name())
+		return fmt.Errorf("failed processing comic book archive: %w", err)
+	}
+
+	// Success, so replace original file with updated file.
+	updatedZip.Close()
+
+	os.Rename(updatedZip.Name(), outputCbzName(zipFileName))
+	if err != nil {
+		return fmt.Errorf("failed moving file: %w", err)
+	}
+
+	return nil
+}
+
+func outputCbzName(sourcePath string) string {
+	dir := filepath.Dir(sourcePath)
+	base := filepath.Base(sourcePath)
+	ext := filepath.Ext(sourcePath)
+	baseNoExt := strings.TrimSuffix(base, ext)
+	return fmt.Sprintf("%s/%s-updated%s", dir, baseNoExt, ext)
 }
 
 // Action performs an action on a ComicInfo, such as printing a value, setting a value, or removing a value.
 type Action func(info *ComicInfo) error
 
+// join many actions together into a single action
 func join(actions []Action) Action {
 	return func(info *ComicInfo) error {
 		for _, action := range actions {
