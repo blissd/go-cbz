@@ -75,27 +75,50 @@ func pipeline(zipFileName string, action Action) error {
 }
 
 func showComicInfo(_ context.Context, args []string) error {
-	return pipeline(args[0], func(info *ComicInfo) error {
-		marshal, err := xml.MarshalIndent(&info, "", " ")
-		if err != nil {
-			return fmt.Errorf("failed to XML marshal ComicInfo.xml: %w", err)
-		}
+	return pipeline(args[0], printXml)
+}
 
-		fmt.Println(string(marshal))
-		return nil
-	})
+func printXml(info *ComicInfo) error {
+	marshal, err := xml.MarshalIndent(&info, "", " ")
+	if err != nil {
+		return fmt.Errorf("failed to XML marshal ComicInfo.xml: %w", err)
+	}
+
+	fmt.Println(string(marshal))
+	return nil
 }
 
 func setComicInfoField(_ context.Context, args []string) error {
 	fmt.Println("meta set:", args)
 
-	nameAndValue := strings.Split(args[0], "=")
+	zipFileName := args[len(args)-1]
+	args = args[:len(args)-1]
+	actions := make([]Action, len(args), len(args)+1) // leave space for (optional) printXml action
+	for i, v := range args {
+		fmt.Println(v)
+		nameAndValue := strings.Split(v, "=")
+		fmt.Println("split:", nameAndValue)
+		actions[i] = setField(nameAndValue[0], nameAndValue[1])
+	}
 
-	return pipeline(args[1], setField(nameAndValue[0], nameAndValue[1]))
+	actions = append(actions, printXml)
+
+	return pipeline(zipFileName, join(actions))
 }
 
 // Action performs an action on a ComicInfo, such as printing a value, setting a value, or removing a value.
 type Action func(info *ComicInfo) error
+
+func join(actions []Action) Action {
+	return func(info *ComicInfo) error {
+		for _, action := range actions {
+			if err := action(info); err != nil {
+				return fmt.Errorf("failed applying action: %w", err)
+			}
+		}
+		return nil
+	}
+}
 
 // setField overwrites the value of a named field in a ComicInfo.
 // Uses reflection... like a monster.
