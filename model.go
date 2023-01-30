@@ -1,6 +1,11 @@
 package main
 
-import "fmt"
+import (
+	"archive/zip"
+	"encoding/xml"
+	"fmt"
+	"io"
+)
 
 // Models the ComicInfo.xml schema file.
 // Schema is currently at version 2.0: https://github.com/anansi-project/comicinfo/blob/main/schema/v2.0/ComicInfo.xsd
@@ -158,4 +163,26 @@ func (v *ComicInfo) validate() error {
 	}
 
 	return nil
+}
+
+func unmarshallComicInfoXml(file *zip.File) (*ComicInfo, error) {
+	r, err := file.Open()
+	if err != nil {
+		return nil, fmt.Errorf("failed to open zip %s for reading: %w", file.Name, err)
+	}
+	defer r.Close()
+
+	bs, err := io.ReadAll(r)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file %s: %w", file.Name, err)
+	}
+
+	info := ComicInfo{}
+	err = xml.Unmarshal(bs, &info)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to XML unmarshal %s: %w", file.Name, err)
+	}
+
+	return &info, nil
 }

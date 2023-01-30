@@ -7,7 +7,6 @@ import (
 	"flag"
 	"fmt"
 	"github.com/peterbourgon/ff/v3/ffcli"
-	"io"
 	"log"
 	"os"
 	"reflect"
@@ -51,8 +50,8 @@ func main() {
 	}
 }
 
-func showComicInfo(_ context.Context, args []string) error {
-	input, err := zip.OpenReader(args[0])
+func pipeline(zipFileName string, action Action) error {
+	input, err := zip.OpenReader(zipFileName)
 	if err != nil {
 		log.Fatalln("Failed to open file:", err)
 	}
@@ -64,40 +63,27 @@ func showComicInfo(_ context.Context, args []string) error {
 				return fmt.Errorf("failed to show ComicInfo.xml: %w", err)
 			}
 
-			info, err := readComicInfo(file)
-
-			marshal, err := xml.MarshalIndent(&info, "", " ")
+			info, err := unmarshallComicInfoXml(file)
+			err = action(info)
 			if err != nil {
-				return fmt.Errorf("failed to XML marshal ComicInfo.xml: %w", err)
+				return fmt.Errorf("failed to apply action to ComicInfo.xml: %w", err)
 			}
-
-			fmt.Println(string(marshal))
 		}
 	}
 
 	return nil
 }
 
-func readComicInfo(file *zip.File) (*ComicInfo, error) {
-	r, err := file.Open()
-	if err != nil {
-		return nil, fmt.Errorf("failed to open zip %s for reading: %w", file.Name, err)
-	}
-	defer r.Close()
+func showComicInfo(_ context.Context, args []string) error {
+	return pipeline(args[0], func(info *ComicInfo) error {
+		marshal, err := xml.MarshalIndent(&info, "", " ")
+		if err != nil {
+			return fmt.Errorf("failed to XML marshal ComicInfo.xml: %w", err)
+		}
 
-	bs, err := io.ReadAll(r)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file %s: %w", file.Name, err)
-	}
-
-	info := ComicInfo{}
-	err = xml.Unmarshal(bs, &info)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to XML unmarshal %s: %w", file.Name, err)
-	}
-
-	return &info, nil
+		fmt.Println(string(marshal))
+		return nil
+	})
 }
 
 func setComicInfoField(_ context.Context, args []string) error {
@@ -105,38 +91,15 @@ func setComicInfoField(_ context.Context, args []string) error {
 
 	nameAndValue := strings.Split(args[0], "=")
 
-	input, err := zip.OpenReader(args[1])
-	if err != nil {
-		log.Fatalln("Failed to open file:", err)
-	}
-	defer input.Close()
-
-	for _, file := range input.File {
-		if file.Name == "ComicInfo.xml" {
-			if err != nil {
-				return fmt.Errorf("failed to show ComicInfo.xml: %w", err)
-			}
-
-			info, err := readComicInfo(file)
-
-			updater := setField(nameAndValue[0], nameAndValue[1])
-			updater(info)
-
-			marshal, err := xml.MarshalIndent(&info, "", " ")
-			if err != nil {
-				return fmt.Errorf("failed to XML marshal ComicInfo.xml: %w", err)
-			}
-
-			fmt.Println(string(marshal))
-		}
-	}
-
-	return nil
+	return pipeline(args[1], setField(nameAndValue[0], nameAndValue[1]))
 }
 
-type FieldUpdater func(info *ComicInfo) error
+// Action performs an action on a ComicInfo, such as printing a value, setting a value, or removing a value.
+type Action func(info *ComicInfo) error
 
-func setField(name string, value any) FieldUpdater {
+// setField overwrites the value of a named field in a ComicInfo.
+// Uses reflection... like a monster.
+func setField(name string, value any) Action {
 	return func(info *ComicInfo) error {
 		rv := reflect.Indirect(reflect.ValueOf(info))
 		f := rv.FieldByName(name)
