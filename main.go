@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"reflect"
 	"strings"
 )
 
@@ -118,8 +119,8 @@ func setComicInfoField(_ context.Context, args []string) error {
 
 			info, err := readComicInfo(file)
 
-			value := AgeRating(nameAndValue[1])
-			info.AgeRating = &value
+			updater := SetField(nameAndValue[0], nameAndValue[1])
+			updater(info)
 
 			marshal, err := xml.MarshalIndent(&info, "", " ")
 			if err != nil {
@@ -131,4 +132,15 @@ func setComicInfoField(_ context.Context, args []string) error {
 	}
 
 	return nil
+}
+
+type FieldUpdater func(info *ComicInfo) error
+
+func SetField(name string, value string) FieldUpdater {
+	return func(info *ComicInfo) error {
+		rv := reflect.Indirect(reflect.ValueOf(info))
+		f := rv.FieldByName(name)
+		f.SetString(value)
+		return nil
+	}
 }

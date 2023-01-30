@@ -11,57 +11,57 @@ type Rating float32
 type ComicPageType string
 
 type ComicPageInfo struct {
-	Image       int            `xml:",attr"`
-	Type        *ComicPageType `xml:",attr"`
-	DoublePage  *bool          `xml:",attr"`
-	ImageSize   *int64         `xml:",attr"`
-	Key         *string        `xml:",attr"`
-	Bookmark    *string        `xml:",attr"`
-	ImageWidth  *int           `xml:",attr"`
-	ImageHeight *int           `xml:",attr"`
+	Image       int           `xml:",attr"`
+	Type        ComicPageType `xml:",attr,omitempty"`
+	DoublePage  bool          `xml:",attr,omitempty"`
+	ImageSize   int64         `xml:",attr,omitempty"`
+	Key         string        `xml:",attr,omitempty"`
+	Bookmark    string        `xml:",attr,omitempty"`
+	ImageWidth  int           `xml:",attr,omitempty"`
+	ImageHeight int           `xml:",attr,omitempty"`
 }
 
 type ArrayOfComicPageInfo []ComicPageInfo
 
 type ComicInfo struct {
-	Title               *string
-	Series              *string
-	Number              *string
-	Count               *int
-	Volume              *int
-	AlternativeSeries   *string
-	AlternativeNumber   *string
-	AlternativeCount    *int
-	Summary             *string
-	Notes               *string
-	Year                *int
-	Month               *int
-	Day                 *int
-	Writer              *string
-	Penciller           *string
-	Inker               *string
-	Colorist            *string
-	Letterer            *string
-	CoverArtist         *string
-	Editor              *string
-	Publisher           *string
-	Imprint             *string
-	Genre               *string
-	Web                 *string
-	PageCount           *int
-	LanguageISO         *string
-	Format              *string
-	BlackAndWhite       *YesNo
-	Manga               *Manga
-	Characters          *string
-	Teams               *string
-	Locations           *string
-	ScanInformation     *string
-	StoryArc            *string
-	SeriesGroup         *string
-	AgeRating           *AgeRating
-	Pages               ArrayOfComicPageInfo
-	CommunityRating     *Rating
-	MainCharacterOrTeam *string
-	Review              *string
+	Title               string               `xml:",omitempty"`
+	Series              string               `xml:",omitempty"`
+	Number              string               `xml:",omitempty"`
+	Count               int                  `xml:",omitempty"`
+	Volume              int                  `xml:",omitempty"`
+	AlternativeSeries   string               `xml:",omitempty"`
+	AlternativeNumber   string               `xml:",omitempty"`
+	AlternativeCount    int                  `xml:",omitempty"`
+	Summary             string               `xml:",omitempty"`
+	Notes               string               `xml:",omitempty"`
+	Year                int                  `xml:",omitempty"`
+	Month               int                  `xml:",omitempty"`
+	Day                 int                  `xml:",omitempty"`
+	Writer              string               `xml:",omitempty"`
+	Penciller           string               `xml:",omitempty"`
+	Inker               string               `xml:",omitempty"`
+	Colorist            string               `xml:",omitempty"`
+	Letterer            string               `xml:",omitempty"`
+	CoverArtist         string               `xml:",omitempty"`
+	Editor              string               `xml:",omitempty"`
+	Publisher           string               `xml:",omitempty"`
+	Imprint             string               `xml:",omitempty"`
+	Genre               string               `xml:",omitempty"`
+	Web                 string               `xml:",omitempty"`
+	PageCount           int                  `xml:",omitempty"`
+	LanguageISO         string               `xml:",omitempty"`
+	Format              string               `xml:",omitempty"`
+	BlackAndWhite       YesNo                `xml:",omitempty"`
+	Manga               Manga                `xml:",omitempty"`
+	Characters          string               `xml:",omitempty"`
+	Teams               string               `xml:",omitempty"`
+	Locations           string               `xml:",omitempty"`
+	ScanInformation     string               `xml:",omitempty"`
+	StoryArc            string               `xml:",omitempty"`
+	SeriesGroup         string               `xml:",omitempty"`
+	AgeRating           AgeRating            `xml:",omitempty"`
+	Pages               ArrayOfComicPageInfo `xml:",omitempty"`
+	CommunityRating     Rating               `xml:",omitempty"`
+	MainCharacterOrTeam string               `xml:",omitempty"`
+	Review              string               `xml:",omitempty"`
 }
