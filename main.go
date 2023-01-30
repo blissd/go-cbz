@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -21,11 +22,18 @@ func main() {
 		Exec:       showComicInfo,
 	}
 
+	metaSet := &ffcli.Command{
+		Name:       "set",
+		ShortUsage: "cbz meta set <field=value> <comic.cbz>",
+		ShortHelp:  "Set an field value. e.g., cbz meta set AgeRating=M",
+		Exec:       setComicInfoField,
+	}
+
 	meta := &ffcli.Command{
 		Name:        "meta",
 		ShortUsage:  "cbz meta <subcommand>",
 		ShortHelp:   "Display and manipulate ComicInfo.xml file in a comic archive",
-		Subcommands: []*ffcli.Command{metaShow},
+		Subcommands: []*ffcli.Command{metaShow, metaSet},
 	}
 
 	root := &ffcli.Command{
@@ -43,51 +51,84 @@ func main() {
 }
 
 func showComicInfo(_ context.Context, args []string) error {
-	fmt.Println(args)
-
 	input, err := zip.OpenReader(args[0])
 	if err != nil {
 		log.Fatalln("Failed to open file:", err)
 	}
+	defer input.Close()
 
 	for _, file := range input.File {
 		if file.Name == "ComicInfo.xml" {
-			err := showComicInfoXml(file)
 			if err != nil {
-				log.Fatalln(err)
+				return fmt.Errorf("failed to show ComicInfo.xml: %w", err)
 			}
+
+			info, err := readComicInfo(file)
+
+			marshal, err := xml.MarshalIndent(&info, "", " ")
+			if err != nil {
+				return fmt.Errorf("failed to XML marshal ComicInfo.xml: %w", err)
+			}
+
+			fmt.Println(string(marshal))
 		}
 	}
 
 	return nil
 }
 
-func showComicInfoXml(file *zip.File) error {
+func readComicInfo(file *zip.File) (*ComicInfo, error) {
 	r, err := file.Open()
 	if err != nil {
-		return fmt.Errorf("failed to open zip %s for reading: %w", file.Name, err)
+		return nil, fmt.Errorf("failed to open zip %s for reading: %w", file.Name, err)
 	}
 	defer r.Close()
 
 	bs, err := io.ReadAll(r)
 	if err != nil {
-		return fmt.Errorf("failed to read file %s: %w", file.Name, err)
+		return nil, fmt.Errorf("failed to read file %s: %w", file.Name, err)
 	}
 
 	info := ComicInfo{}
 	err = xml.Unmarshal(bs, &info)
+
 	if err != nil {
-		return fmt.Errorf("failed to XML unmarshal %s: %w", file.Name, err)
+		return nil, fmt.Errorf("failed to XML unmarshal %s: %w", file.Name, err)
 	}
 
-	//fmt.Println("raw info:", info)
+	return &info, nil
+}
 
-	marshal, err := xml.MarshalIndent(&info, "", " ")
+func setComicInfoField(_ context.Context, args []string) error {
+	fmt.Println("meta set:", args)
+
+	nameAndValue := strings.Split(args[0], "=")
+
+	input, err := zip.OpenReader(args[1])
 	if err != nil {
-		return fmt.Errorf("failed to XML marshal %s: %w", file.Name, err)
+		log.Fatalln("Failed to open file:", err)
 	}
+	defer input.Close()
 
-	fmt.Println("marshalled XML:", string(marshal))
+	for _, file := range input.File {
+		if file.Name == "ComicInfo.xml" {
+			if err != nil {
+				return fmt.Errorf("failed to show ComicInfo.xml: %w", err)
+			}
+
+			info, err := readComicInfo(file)
+
+			value := AgeRating(nameAndValue[1])
+			info.AgeRating = &value
+
+			marshal, err := xml.MarshalIndent(&info, "", " ")
+			if err != nil {
+				return fmt.Errorf("failed to XML marshal ComicInfo.xml: %w", err)
+			}
+
+			fmt.Println(string(marshal))
+		}
+	}
 
 	return nil
 }
