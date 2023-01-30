@@ -136,11 +136,20 @@ func setComicInfoField(_ context.Context, args []string) error {
 
 type FieldUpdater func(info *ComicInfo) error
 
-func setField(name string, value string) FieldUpdater {
+func setField(name string, value any) FieldUpdater {
 	return func(info *ComicInfo) error {
 		rv := reflect.Indirect(reflect.ValueOf(info))
 		f := rv.FieldByName(name)
-		f.SetString(value)
+		switch v := value.(type) {
+		case string:
+			f.SetString(v)
+		case int64:
+			f.SetInt(v)
+		case bool:
+			f.SetBool(v)
+		default:
+			return fmt.Errorf("unsupported data type: %v", v)
+		}
 		return nil
 	}
 }
