@@ -1,0 +1,25 @@
+# https://taskfile.dev
+
+version: '3'
+
+vars:
+  BINARY_NAME: cbz
+
+tasks:
+  build:
+    desc: "Build executable binary"
+    cmds:
+      - go build -o {{.BINARY_NAME}}
+    silent: true
+
+  test:
+    desc: "Run all unit tests"
+    cmds:
+      - go test -v ./...
+    silent: true
+
+  clean:
+    desc: "Remove build artefacts"
+    cmds:
+      - go clean
+    silent: true
