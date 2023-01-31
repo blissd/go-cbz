@@ -27,22 +27,24 @@ func (v YesNo) validate() error {
 type AgeRating string
 
 func (v AgeRating) validate() error {
+	// The order age ratings in the XSD is... somewhat random.
+	// This order is taken from the Kavita source code: https://github.com/Kareadita/Kavita/blob/develop/API/Entities/Enums/AgeRating.cs
 	switch v {
 	case "":
 	case "Unknown":
-	case "Adults Only 18+":
+	case "Rating Pending":
 	case "Early Childhood":
 	case "Everyone":
-	case "Everyone 10+":
 	case "G":
+	case "Everyone 10+":
+	case "PG":
 	case "Kids to Adults":
-	case "M":
+	case "Teen":
 	case "MA15+":
 	case "Mature 17+":
-	case "PG":
+	case "M":
 	case "R18+":
-	case "Rating Pending":
-	case "Teen":
+	case "Adults Only 18+":
 	case "X18+":
 	default:
 		return fmt.Errorf("invalid value for AgeRating: %v", v)
