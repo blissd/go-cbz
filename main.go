@@ -190,11 +190,16 @@ func setComicInfoField(_ context.Context, args []string) error {
 		}
 	}
 
-	args = args[:len(zipFileNames)]
+	// remove file names from argument list so only metadata name=value pairs are left
+	args = args[:len(args)-len(zipFileNames)]
+
 	actions := make([]Action, len(args), len(args)+2) // leave space for validate and (optional) printXml actions
 
 	for i, v := range args {
 		nameAndValue := strings.Split(v, "=")
+		if len(nameAndValue) != 2 {
+			return fmt.Errorf("malformed metadata: '%v'", v)
+		}
 		typedValue, err := convertFieldValue(nameAndValue[0], nameAndValue[1])
 		if err != nil {
 			return fmt.Errorf("field %s has invalid value %s: %w", nameAndValue[0], nameAndValue[1], err)
