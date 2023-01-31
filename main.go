@@ -16,6 +16,8 @@ import (
 	"strings"
 )
 
+const comicInfoXmlName = "ComicInfo.xml"
+
 func main() {
 
 	metaShow := &ffcli.Command{
@@ -64,41 +66,24 @@ func process(zipFileName string, action Action, output io.Writer) error {
 	outputZip := zip.NewWriter(output)
 	defer outputZip.Close()
 
+	// Will write the ComicInfo.xml file as the last entry of the CBZ archive
+	var info *ComicInfo
+
 	for _, file := range input.File {
 		if err != nil {
 			return fmt.Errorf("failed creating file in zip archive: %w", err)
 		}
 
-		if file.Name == "ComicInfo.xml" {
-			w, err := outputZip.Create(file.Name)
-
+		if file.Name == comicInfoXmlName {
 			if err != nil {
 				return fmt.Errorf("failed to show ComicInfo.xml: %w", err)
 			}
 
-			info, err := unmarshallComicInfoXml(file)
+			info, err = unmarshallComicInfoXml(file)
 			if err != nil {
 				return fmt.Errorf("failed to unmarshal ComicInfo.xml: %w", err)
 			}
 
-			err = action(info)
-			if err != nil {
-				return fmt.Errorf("failed to apply action to ComicInfo.xml: %w", err)
-			}
-
-			err = info.validate()
-			if err != nil {
-				return fmt.Errorf("failed to produce a valid ComicInfo.xml: %w", err)
-			}
-
-			bs, err := xml.MarshalIndent(info, "", "  ")
-			if err != nil {
-				return fmt.Errorf("failed to marshal ComicInfo.xml: %w", err)
-			}
-
-			if _, err = w.Write(bs); err != nil {
-				return fmt.Errorf("failed to write ComicInfo.xml: %w", err)
-			}
 		} else {
 			// Copies source file as-is. No-decompression/validation/re-compression.
 			err = outputZip.Copy(file)
@@ -106,6 +91,29 @@ func process(zipFileName string, action Action, output io.Writer) error {
 				return fmt.Errorf("failed to add %s: %w", file.Name, err)
 			}
 		}
+	}
+
+	if info == nil {
+		info = &ComicInfo{}
+	}
+
+	err = action(info)
+	if err != nil {
+		return fmt.Errorf("failed to apply action to ComicInfo.xml: %w", err)
+	}
+
+	err = info.validate()
+	if err != nil {
+		return fmt.Errorf("failed to produce a valid ComicInfo.xml: %w", err)
+	}
+
+	bs, err := xml.MarshalIndent(info, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal ComicInfo.xml: %w", err)
+	}
+	w, err := outputZip.Create(comicInfoXmlName)
+	if _, err = w.Write(bs); err != nil {
+		return fmt.Errorf("failed to write ComicInfo.xml: %w", err)
 	}
 
 	return nil
