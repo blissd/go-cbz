@@ -65,12 +65,13 @@ func process(zipFileName string, action Action, output io.Writer) error {
 	defer outputZip.Close()
 
 	for _, file := range input.File {
-		w, err := outputZip.Create(file.Name)
 		if err != nil {
 			return fmt.Errorf("failed creating file in zip archive: %w", err)
 		}
 
 		if file.Name == "ComicInfo.xml" {
+			w, err := outputZip.Create(file.Name)
+
 			if err != nil {
 				return fmt.Errorf("failed to show ComicInfo.xml: %w", err)
 			}
@@ -99,27 +100,14 @@ func process(zipFileName string, action Action, output io.Writer) error {
 				return fmt.Errorf("failed to write ComicInfo.xml: %w", err)
 			}
 		} else {
-			err = copyFile(w, file)
+			// Copies source file as-is. No-decompression/validation/re-compression.
+			err = outputZip.Copy(file)
 			if err != nil {
 				return fmt.Errorf("failed to add %s: %w", file.Name, err)
 			}
 		}
 	}
 
-	return nil
-}
-
-func copyFile(w io.Writer, src *zip.File) error {
-	r, err := src.Open()
-	if err != nil {
-		return fmt.Errorf("failed to open %s: %w", src.Name, err)
-	}
-	defer r.Close()
-
-	_, err = io.Copy(w, r)
-	if err != nil {
-		return fmt.Errorf("failed to copy %s: %w", src.Name, err)
-	}
 	return nil
 }
 
