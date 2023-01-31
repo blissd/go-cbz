@@ -185,8 +185,16 @@ func convertFieldValue(name string, value string) (any, error) {
 }
 
 func setComicInfoField(_ context.Context, args []string) error {
-	zipFileName := args[len(args)-1]
-	args = args[:len(args)-1]
+
+	zipFileNames := []string{}
+
+	for _, v := range args {
+		if strings.HasSuffix(v, ".cbz") {
+			zipFileNames = append(zipFileNames, v)
+		}
+	}
+
+	args = args[:len(zipFileNames)]
 	actions := make([]Action, len(args), len(args)+2) // leave space for validate and (optional) printXml actions
 
 	for i, v := range args {
@@ -198,14 +206,26 @@ func setComicInfoField(_ context.Context, args []string) error {
 		actions[i] = setField(nameAndValue[0], typedValue)
 	}
 
-	actions = append(actions, validate, printXml) // TODO only add this action with a -v "verbose" flag
+	action := join(append(actions, validate, printXml)) // TODO only add this action with a -v "verbose" flag
+
+	for _, name := range zipFileNames {
+		err := updateZip(name, action)
+		if err != nil {
+			return fmt.Errorf("failed updating comic archive '%s': %w", name, err)
+		}
+	}
+
+	return nil
+}
+
+func updateZip(zipFileName string, action Action) error {
 
 	updatedZip, err := os.CreateTemp(filepath.Dir(zipFileName), filepath.Base(zipFileName))
 	if err != nil {
 		return fmt.Errorf("failed creating temporary file: %w", err)
 	}
 
-	err = process(zipFileName, join(actions), updatedZip)
+	err = process(zipFileName, action, updatedZip)
 	if err != nil {
 		updatedZip.Close()
 		os.Remove(updatedZip.Name())
