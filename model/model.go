@@ -217,7 +217,7 @@ var floatFieldNames = []string{
 	"CommunityRating",
 }
 
-// floatFieldNames contains ComicInfo.xml field names that have a bool data type.
+// boolFieldNames contains ComicInfo.xml field names that have a bool data type.
 var boolFieldNames = []string{
 	"DoublePage",
 }
