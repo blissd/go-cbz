@@ -153,3 +153,23 @@ func TestConvert(t *testing.T) {
 		})
 	}
 }
+
+func TestComicInfo_String(t *testing.T) {
+
+	info := ComicInfo{
+		Title:  "Great Comic",
+		Series: "Great Series",
+	}
+
+	got := info.String()
+
+	want :=
+		`<ComicInfo>
+ <Title>Great Comic</Title>
+ <Series>Great Series</Series>
+</ComicInfo>`
+
+	if want != got {
+		t.Fatalf("want: %v, got: %v", want, got)
+	}
+}
