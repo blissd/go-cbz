@@ -1,6 +1,7 @@
-package main
+package infosetcmd
 
 import (
+	"cbz/model"
 	"reflect"
 	"testing"
 )
@@ -13,19 +14,19 @@ func Test_setField(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want ComicInfo
+		want model.ComicInfo
 	}{
 		{
 			name: "AgeRating",
 			args: args{"AgeRating", "M"},
-			want: ComicInfo{
+			want: model.ComicInfo{
 				AgeRating: "M",
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			info := ComicInfo{}
+			info := model.ComicInfo{}
 			setter := setField(tt.args.name, tt.args.value)
 			err := setter(&info)
 			if err != nil {

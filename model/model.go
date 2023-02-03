@@ -1,14 +1,17 @@
-package main
+package model
 
 import (
 	"archive/zip"
 	"encoding/xml"
 	"fmt"
 	"io"
+	"strconv"
 )
 
 // Models the ComicInfo.xml schema file.
 // Schema is currently at version 2.0: https://github.com/anansi-project/comicinfo/blob/main/schema/v2.0/ComicInfo.xsd
+
+const ComicInfoXmlName = "ComicInfo.xml"
 
 type YesNo string
 
@@ -147,18 +150,27 @@ type ComicInfo struct {
 	Review              string               `xml:",omitempty"`
 }
 
-func (v *ComicInfo) validate() error {
-	if err := v.AgeRating.validate(); err != nil {
+func (c *ComicInfo) String() string {
+	marshal, err := xml.MarshalIndent(c, "", " ")
+	if err != nil {
+		return "<invalid ComicInfo.xml>"
+	}
+
+	return string(marshal)
+}
+
+func (c *ComicInfo) Validate() error {
+	if err := c.AgeRating.validate(); err != nil {
 		return fmt.Errorf("invalid value for AgeRating: %w", err)
 	}
-	if err := v.BlackAndWhite.validate(); err != nil {
+	if err := c.BlackAndWhite.validate(); err != nil {
 		return fmt.Errorf("invalid value for BlackAndWhite: %w", err)
 	}
-	if err := v.Manga.validate(); err != nil {
+	if err := c.Manga.validate(); err != nil {
 		return fmt.Errorf("invalid value for Manga: %w", err)
 	}
 
-	for _, p := range v.Pages {
+	for _, p := range c.Pages {
 		if err := p.Type.validate(); err != nil {
 			return fmt.Errorf("invalid value for Pages.Type: %w", err)
 		}
@@ -167,7 +179,7 @@ func (v *ComicInfo) validate() error {
 	return nil
 }
 
-func unmarshallComicInfoXml(file *zip.File) (*ComicInfo, error) {
+func Unmarshal(file *zip.File) (*ComicInfo, error) {
 	r, err := file.Open()
 	if err != nil {
 		return nil, fmt.Errorf("failed to open zip %s for reading: %w", file.Name, err)
@@ -187,4 +199,45 @@ func unmarshallComicInfoXml(file *zip.File) (*ComicInfo, error) {
 	}
 
 	return &info, nil
+}
+
+// intFieldNames contains ComicInfo.xml field names that have an int data type.
+var intFieldNames = []string{
+	"Count",
+	"Volume",
+	"AlternativeCount",
+	"Year",
+	"Month",
+	"Day",
+	"PageCount",
+}
+
+// floatFieldNames contains ComicInfo.xml field names that have a float data type.
+var floatFieldNames = []string{
+	"CommunityRating",
+}
+
+// floatFieldNames contains ComicInfo.xml field names that have a bool data type.
+var boolFieldNames = []string{
+	"DoublePage",
+}
+
+// Convert a string representation of a value to the correct data type.
+func Convert(name string, value string) (any, error) {
+	for _, n := range intFieldNames {
+		if n == name {
+			return strconv.ParseInt(value, 10, 64)
+		}
+	}
+	for _, n := range floatFieldNames {
+		if n == name {
+			return strconv.ParseFloat(value, 32)
+		}
+	}
+	for _, n := range boolFieldNames {
+		if n == name {
+			return strconv.ParseBool(value)
+		}
+	}
+	return value, nil
 }

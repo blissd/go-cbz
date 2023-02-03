@@ -1,4 +1,4 @@
-package main
+package model
 
 import "testing"
 
@@ -17,7 +17,7 @@ func TestYesNo_validate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := tt.v.validate(); (err != nil) != tt.wantErr {
-				t.Errorf("validate() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -39,7 +39,7 @@ func TestManga_validate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := tt.v.validate(); (err != nil) != tt.wantErr {
-				t.Errorf("validate() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -72,7 +72,7 @@ func TestAgeRating_validate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := tt.v.validate(); (err != nil) != tt.wantErr {
-				t.Errorf("validate() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -101,7 +101,7 @@ func TestComicPageType_validate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := tt.v.validate(); (err != nil) != tt.wantErr {
-				t.Errorf("validate() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
