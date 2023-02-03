@@ -14,7 +14,7 @@ type config struct {
 	out io.Writer
 }
 
-// Creates a new ffcli.Command for showing a ComicInfo.xml file.
+// New creates a new ffcli.Command for showing a ComicInfo.xml file.
 // Operates on a single CBZ file.
 func New(out io.Writer) *ffcli.Command {
 	c := config{
