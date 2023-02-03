@@ -6,13 +6,18 @@ import (
 	"context"
 	"fmt"
 	"github.com/peterbourgon/ff/v3/ffcli"
+	"io"
 	"log"
 )
 
-type config struct{}
+type config struct {
+	out io.Writer
+}
 
-func New() *ffcli.Command {
-	c := config{}
+func New(out io.Writer) *ffcli.Command {
+	c := config{
+		out: out,
+	}
 
 	return &ffcli.Command{
 		Name:       "show",
@@ -36,7 +41,7 @@ func (c *config) exec(ctx context.Context, args []string) error {
 				return fmt.Errorf("failed to unmarshal ComicInfo.xml: %w", err)
 			}
 
-			fmt.Println(info)
+			fmt.Fprintln(c.out, info)
 			return nil // early
 		}
 	}

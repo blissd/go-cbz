@@ -15,8 +15,8 @@ func main() {
 		Name:       "root",
 		ShortUsage: "cbz <subcommand>",
 		Subcommands: []*ffcli.Command{
-			infoshowcmd.New(),
-			infosetcmd.New(),
+			infoshowcmd.New(os.Stdout),
+			infosetcmd.New(os.Stdout),
 		},
 		Exec: func(ctx context.Context, args []string) error {
 			return flag.ErrHelp

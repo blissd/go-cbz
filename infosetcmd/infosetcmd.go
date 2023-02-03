@@ -14,11 +14,15 @@ import (
 	"strings"
 )
 
-type config struct{}
+type config struct {
+	out io.Writer
+}
 
-func New() *ffcli.Command {
+func New(out io.Writer) *ffcli.Command {
 
-	c := config{}
+	c := config{
+		out: out,
+	}
 
 	return &ffcli.Command{
 		Name:       "set",
@@ -55,7 +59,7 @@ func (c *config) exec(_ context.Context, args []string) error {
 		actions[i] = setField(nameAndValue[0], typedValue)
 	}
 
-	action := join(append(actions, validate, printXml)) // TODO only add this action with a -v "verbose" flag
+	action := join(append(actions, validate, c.printXml)) // TODO only add this action with a -v "verbose" flag
 
 	for _, name := range zipFileNames {
 		err := c.updateZip(name, action)
@@ -161,8 +165,8 @@ func applyActions(zipFileName string, action action, output io.Writer) error {
 type action func(info *model.ComicInfo) error
 
 // printXml is an action that prints the ComicInfo.xml to stdout.
-func printXml(info *model.ComicInfo) error {
-	fmt.Println(info)
+func (c *config) printXml(info *model.ComicInfo) error {
+	fmt.Fprintln(c.out, info)
 	return nil
 }
 
