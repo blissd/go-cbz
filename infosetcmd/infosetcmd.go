@@ -116,20 +116,11 @@ func applyActions(zipFileName string, action action, output io.Writer) error {
 	var info *model.ComicInfo
 
 	for _, file := range input.File {
-		if err != nil {
-			return fmt.Errorf("failed creating file in zip archive: %w", err)
-		}
-
 		if file.Name == model.ComicInfoXmlName {
-			if err != nil {
-				return fmt.Errorf("failed to show ComicInfo.xml: %w", err)
-			}
-
 			info, err = model.Unmarshal(file)
 			if err != nil {
 				return fmt.Errorf("failed to unmarshal ComicInfo.xml: %w", err)
 			}
-
 		} else {
 			// Copies source file as-is. No-decompression/validation/re-compression.
 			err = outputZip.Copy(file)
