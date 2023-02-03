@@ -1,6 +1,9 @@
 package model
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+)
 
 func TestYesNo_validate(t *testing.T) {
 	tests := []struct {
@@ -8,7 +11,7 @@ func TestYesNo_validate(t *testing.T) {
 		v       YesNo
 		wantErr bool
 	}{
-		{"Blank", "Yes", false},
+		{"Blank", "", false},
 		{"Unknown", "Unknown", false},
 		{"Yes", "Yes", false},
 		{"No", "No", false},
@@ -29,7 +32,7 @@ func TestManga_validate(t *testing.T) {
 		v       Manga
 		wantErr bool
 	}{
-		{"Blank", "Yes", false},
+		{"Blank", "", false},
 		{"Unknown", "Unknown", false},
 		{"No", "No", false},
 		{"Yes", "Yes", false},
@@ -51,7 +54,7 @@ func TestAgeRating_validate(t *testing.T) {
 		v       AgeRating
 		wantErr bool
 	}{
-		{"", "", false},
+		{"Blank", "", false},
 		{"Unknown", "Unknown", false},
 		{"Adults Only 18+", "Adults Only 18+", false},
 		{"Early Childhood", "Early Childhood", false},
@@ -84,7 +87,7 @@ func TestComicPageType_validate(t *testing.T) {
 		v       ComicPageType
 		wantErr bool
 	}{
-		{"", "", false},
+		{"Blank", "", false},
 		{"FrontCover", "FrontCover", false},
 		{"InnerCover", "InnerCover", false},
 		{"Roundup", "Roundup", false},
@@ -102,6 +105,50 @@ func TestComicPageType_validate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := tt.v.validate(); (err != nil) != tt.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestConvert(t *testing.T) {
+	type args struct {
+		name  string
+		value string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    any
+		wantErr bool
+	}{
+		{"AgeRating", args{"AgeRating", "PG"}, "PG", false},
+		// int fields
+		{"Count", args{"Count", "1"}, int64(1), false},
+		{"Volume", args{"Volume", "2"}, int64(2), false},
+		{"AlternativeCount", args{"AlternativeCount", "3"}, int64(3), false},
+		{"Year", args{"Year", "4"}, int64(4), false},
+		{"Month", args{"Month", "5"}, int64(5), false},
+		{"Day", args{"Day", "6"}, int64(6), false},
+		{"PageCount", args{"PageCount", "7"}, int64(7), false},
+		{"Not an int", args{"PageCount", "not an int"}, int64(0), true},
+		// float fields
+		{"CommunityRating", args{"CommunityRating", "1.5"}, 1.5, false},
+		{"Not a float", args{"CommunityRating", "not a float"}, 0.0, true},
+		// bool fields
+		{"DoublePage", args{"DoublePage", "true"}, true, false},
+		{"Not a bool", args{"DoublePage", "green"}, false, true},
+		// everything else is a string
+		{"Strings", args{"AnyRandomField", "abc"}, "abc", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := Convert(tt.args.name, tt.args.value)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Convert() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Convert() got = %v, want %v", got, tt.want)
 			}
 		})
 	}

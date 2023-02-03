@@ -180,6 +180,9 @@ func (c *ComicInfo) Validate() error {
 }
 
 func Unmarshal(file *zip.File) (*ComicInfo, error) {
+	if file.Name != ComicInfoXmlName {
+		return nil, fmt.Errorf("invalid file name: %v", file.Name)
+	}
 	r, err := file.Open()
 	if err != nil {
 		return nil, fmt.Errorf("failed to open zip %s for reading: %w", file.Name, err)
