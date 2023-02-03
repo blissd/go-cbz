@@ -7,7 +7,6 @@ import (
 	"github.com/blissd/cbz/model"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"io"
-	"log"
 )
 
 type config struct {
@@ -33,7 +32,7 @@ func New(out io.Writer) *ffcli.Command {
 func (c *config) exec(ctx context.Context, args []string) error {
 	input, err := zip.OpenReader(args[0])
 	if err != nil {
-		log.Fatalln("Failed to open file:", err)
+		return fmt.Errorf("failed to open file:%w", err)
 	}
 	defer input.Close()
 
