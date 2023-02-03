@@ -18,6 +18,8 @@ type config struct {
 	out io.Writer
 }
 
+// New creates a ffcli.Command for updating the metadata in a ComicInfo.xml file.
+// Can update multiple fields at once. Operates on multiple CBZ files sequentially.
 func New(out io.Writer) *ffcli.Command {
 
 	c := config{
@@ -32,6 +34,7 @@ func New(out io.Writer) *ffcli.Command {
 	}
 }
 
+// exec is the callback for ffcli.Command
 func (c *config) exec(_ context.Context, args []string) error {
 
 	zipFileNames := []string{}
@@ -71,6 +74,8 @@ func (c *config) exec(_ context.Context, args []string) error {
 	return nil
 }
 
+// updateZip updates a single zip file to transform the ComicInfo.xml file.
+// Source file will be replaced with updated version.
 func (c *config) updateZip(zipFileName string, action action) error {
 
 	updatedZip, err := os.CreateTemp(filepath.Dir(zipFileName), filepath.Base(zipFileName))

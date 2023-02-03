@@ -14,6 +14,8 @@ type config struct {
 	out io.Writer
 }
 
+// Creates a new ffcli.Command for showing a ComicInfo.xml file.
+// Operates on a single CBZ file.
 func New(out io.Writer) *ffcli.Command {
 	c := config{
 		out: out,
@@ -27,6 +29,7 @@ func New(out io.Writer) *ffcli.Command {
 	}
 }
 
+// exec is the callback for ffcli.Command
 func (c *config) exec(ctx context.Context, args []string) error {
 	input, err := zip.OpenReader(args[0])
 	if err != nil {
