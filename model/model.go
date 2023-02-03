@@ -30,7 +30,7 @@ func (v YesNo) validate() error {
 type AgeRating string
 
 func (v AgeRating) validate() error {
-	// The order age ratings in the XSD is... somewhat random.
+	// The order of age ratings in the XSD is somewhat random.
 	// This order is taken from the Kavita source code: https://github.com/Kareadita/Kavita/blob/develop/API/Entities/Enums/AgeRating.cs
 	switch v {
 	case "":
