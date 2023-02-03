@@ -1,6 +1,6 @@
 # Comic Book Zip Archive Tool
 
-`cbz` is a command-line tool for viewing and manipulating comic book zip archive files.
+`cbz` is a command-line tool for viewing and manipulating `ComicInfo.xml` files in comic book zip archive files. The schema for `ComicInfo.xml` files is defined by the [Anansi Project](https://github.com/anansi-project/comicinfo).
 
 ## Why?
 
