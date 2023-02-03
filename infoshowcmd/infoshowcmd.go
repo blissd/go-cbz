@@ -2,9 +2,9 @@ package infoshowcmd
 
 import (
 	"archive/zip"
-	"cbz/model"
 	"context"
 	"fmt"
+	"github.com/blissd/cbz/model"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"io"
 	"log"

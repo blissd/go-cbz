@@ -1,4 +1,4 @@
-module cbz
+module github.com/blissd/cbz
 
 go 1.19
 

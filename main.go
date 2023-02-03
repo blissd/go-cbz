@@ -1,10 +1,10 @@
 package main
 
 import (
-	"cbz/infosetcmd"
-	"cbz/infoshowcmd"
 	"context"
 	"flag"
+	"github.com/blissd/cbz/infosetcmd"
+	"github.com/blissd/cbz/infoshowcmd"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"log"
 	"os"

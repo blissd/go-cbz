@@ -2,10 +2,10 @@ package infosetcmd
 
 import (
 	"archive/zip"
-	"cbz/model"
 	"context"
 	"encoding/xml"
 	"fmt"
+	"github.com/blissd/cbz/model"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"io"
 	"os"
