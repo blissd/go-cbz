@@ -1,7 +1,7 @@
 package infosetcmd
 
 import (
-	"cbz/model"
+	"github.com/blissd/cbz/model"
 	"reflect"
 	"testing"
 )
