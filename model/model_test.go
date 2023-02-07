@@ -159,6 +159,13 @@ func TestComicInfo_String(t *testing.T) {
 	info := ComicInfo{
 		Title:  "Great Comic",
 		Series: "Great Series",
+		Pages: []ComicPageInfo{
+			{
+				Image:      0,
+				Type:       "Story",
+				DoublePage: true,
+			},
+		},
 	}
 
 	got := info.String()
@@ -167,6 +174,9 @@ func TestComicInfo_String(t *testing.T) {
 		`<ComicInfo>
  <Title>Great Comic</Title>
  <Series>Great Series</Series>
+ <Pages>
+  <Page Image="0" Type="Story" DoublePage="true" />
+ </Pages>
 </ComicInfo>`
 
 	if want != got {

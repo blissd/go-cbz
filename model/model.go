@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 )
 
 // Models the ComicInfo.xml schema file.
@@ -144,7 +145,7 @@ type ComicInfo struct {
 	StoryArc            string               `xml:",omitempty"`
 	SeriesGroup         string               `xml:",omitempty"`
 	AgeRating           AgeRating            `xml:",omitempty"`
-	Pages               ArrayOfComicPageInfo `xml:",omitempty"`
+	Pages               ArrayOfComicPageInfo `xml:"Pages>Page,omitempty"`
 	CommunityRating     Rating               `xml:",omitempty"`
 	MainCharacterOrTeam string               `xml:",omitempty"`
 	Review              string               `xml:",omitempty"`
@@ -156,7 +157,11 @@ func (c *ComicInfo) String() string {
 		return "<invalid ComicInfo.xml>"
 	}
 
-	return string(marshal)
+	s := string(marshal)
+	s = strings.ReplaceAll(s, "></Page>", " />")
+	s = strings.ReplaceAll(s, " <Pages></Pages>\n", "")
+
+	return s
 }
 
 func (c *ComicInfo) Validate() error {
