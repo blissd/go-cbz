@@ -159,8 +159,10 @@ func (c *config) applyActions(zipFileName string, action comicInfoAction, output
 		}
 	}
 
-	// TODO only do this if len(info.Pages) is zero? Or can they be merged?
-	info.Pages = pages
+	if c.computePages {
+		// TODO only do this if len(info.Pages) is zero? Or can they be merged?
+		info.Pages = pages
+	}
 
 	err = action(info)
 	if err != nil {
