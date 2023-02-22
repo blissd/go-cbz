@@ -41,3 +41,11 @@ The `set` command can operate on multiple comic archives:
 ```shell
 cbz set AgeRating=Teen "Writer=Terry Moore" series1/comic1.cbz series2/*.cbz
 ```
+
+The `import` command "imports" a CBR file by converting it into a CBZ file.
+
+```shell
+cbz import comic.cbr
+ls
+comic.cbr comic.cbz
+```
