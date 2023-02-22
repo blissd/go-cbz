@@ -109,7 +109,7 @@ func (c *config) updateZip(zipFileName string, action comicInfoAction) error {
 	// Success, so replace original file with updated file.
 	updatedZip.Close()
 
-	os.Rename(updatedZip.Name(), zipFileName)
+	err = os.Rename(updatedZip.Name(), zipFileName)
 	if err != nil {
 		return fmt.Errorf("failed moving file: %w", err)
 	}
