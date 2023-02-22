@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"github.com/blissd/cbz/cbrimportcmd"
 	"github.com/blissd/cbz/infosetcmd"
 	"github.com/blissd/cbz/infoshowcmd"
 	"github.com/peterbourgon/ff/v3/ffcli"
@@ -17,6 +18,7 @@ func main() {
 		Subcommands: []*ffcli.Command{
 			infoshowcmd.New(os.Stdout),
 			infosetcmd.New(os.Stdout),
+			cbrimportcmd.New(os.Stdout),
 		},
 		Exec: func(ctx context.Context, args []string) error {
 			return flag.ErrHelp
