@@ -129,6 +129,7 @@ type ComicInfo struct {
 	Letterer            string               `xml:",omitempty"`
 	CoverArtist         string               `xml:",omitempty"`
 	Editor              string               `xml:",omitempty"`
+	Translator          string               `xml:",omitempty"`
 	Publisher           string               `xml:",omitempty"`
 	Imprint             string               `xml:",omitempty"`
 	Genre               string               `xml:",omitempty"`
