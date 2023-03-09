@@ -6,6 +6,7 @@ import (
 	"github.com/blissd/cbz/cbrimportcmd"
 	"github.com/blissd/cbz/infosetcmd"
 	"github.com/blissd/cbz/infoshowcmd"
+	"github.com/blissd/cbz/renamecmd"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"log"
 	"os"
@@ -19,6 +20,7 @@ func main() {
 			infoshowcmd.New(os.Stdout),
 			infosetcmd.New(os.Stdout),
 			cbrimportcmd.New(os.Stdout),
+			renamecmd.New(os.Stdout),
 		},
 		Exec: func(ctx context.Context, args []string) error {
 			return flag.ErrHelp
