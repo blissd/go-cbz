@@ -18,8 +18,14 @@ import (
 type config struct {
 	out io.Writer
 
-	// includeTitle include title in file name in addition to series
+	// includeTitle include Title in file name in addition to series
 	includeTitle bool
+
+	// includeNumber include Number field in file name.
+	includeNumber bool
+
+	// dryRun disables applying renames and just prints new names instead.
+	dryRun bool
 }
 
 func New(out io.Writer) *ffcli.Command {
@@ -27,6 +33,9 @@ func New(out io.Writer) *ffcli.Command {
 		out: out,
 	}
 	fs := flag.NewFlagSet("cbz rename", flag.ExitOnError)
+	fs.BoolVar(&cfg.includeTitle, "t", false, "include comic title in file name.")
+	fs.BoolVar(&cfg.includeNumber, "n", false, "include comic number in file name.")
+	fs.BoolVar(&cfg.dryRun, "d", false, "dry-run")
 
 	return &ffcli.Command{
 		Name:       "rename",
@@ -90,15 +99,22 @@ func (cfg *config) rename(fileName string) error {
 	newPath := filepath.Join(dir, inferredFileName)
 	newPath = fmt.Sprintf("%s.cbz", newPath)
 
-	_, err = os.Stat(newPath)
-
-	if errors.Is(err, fsys.ErrExist) {
-		return fmt.Errorf("destination file already exists: %v", newPath)
+	// Renaming should be non-destructive, so fail if the destination file exists.
+	// We can tell it exists if we _don't_ get an error!
+	if _, err = os.Stat(newPath); !errors.Is(err, fsys.ErrNotExist) {
+		if err != nil {
+			return fmt.Errorf("file exists '%v'", newPath)
+		}
+		return fmt.Errorf("file already exists: '%v'", newPath)
 	}
 
-	err = os.Rename(fileName, newPath)
-	if err != nil {
-		return fmt.Errorf("failed renaming file '%v' to '%v': %w", fileName, newPath, err)
+	if cfg.dryRun {
+		fmt.Printf("Dry-run: would rename '%s' to '%s'\n", fileName, newPath)
+	} else {
+		err = os.Rename(fileName, newPath)
+		if err != nil {
+			return fmt.Errorf("failed renaming file '%v' to '%v': %w", fileName, newPath, err)
+		}
 	}
 	return nil
 }
@@ -108,11 +124,7 @@ func (cfg *config) inferFileName(c *model.ComicInfo) (string, error) {
 
 	if c.Series != "" {
 		b.WriteString(c.Series)
-	}
-	if c.Title != "" {
-		if b.Len() > 0 {
-			b.WriteString(" - ")
-		}
+	} else if c.Title != "" {
 		b.WriteString(c.Title)
 	}
 
@@ -120,9 +132,21 @@ func (cfg *config) inferFileName(c *model.ComicInfo) (string, error) {
 		b.WriteString(fmt.Sprintf(" v%02d", c.Volume))
 	}
 
-	if c.Number != "" {
+	// If there is _no_ Volume but there is a Number, then include Number anyway.
+	if (cfg.includeNumber && c.Number != "") || (c.Number != "" && c.Volume == 0) {
 		b.WriteString(" #")
 		b.WriteString(c.Number)
+	}
+
+	if cfg.includeTitle && c.Title != "" && c.Series != "" {
+		if b.Len() > 0 {
+			b.WriteString(" - ")
+		}
+		b.WriteString(c.Title)
+	}
+
+	if b.Len() == 0 {
+		return "", fmt.Errorf("not enough metadata to rename file")
 	}
 
 	return b.String(), nil
