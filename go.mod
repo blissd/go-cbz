@@ -1,6 +1,6 @@
 module github.com/blissd/cbz
 
-go 1.19
+go 1.20
 
 require (
 	github.com/gen2brain/go-unarr v0.1.6
