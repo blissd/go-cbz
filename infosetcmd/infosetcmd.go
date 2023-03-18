@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/blissd/cbz/model"
+	"github.com/chai2010/webp"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"image"
 	"image/jpeg"
@@ -295,6 +296,8 @@ func (c *config) updatePage(page *model.ComicPageInfo, file *zip.File) (*model.C
 		img, err = jpeg.Decode(ir)
 	case isPng(file.Name):
 		img, err = png.Decode(ir)
+	case isWebp(file.Name):
+		img, err = webp.Decode(ir)
 	}
 
 	if err != nil {
@@ -311,7 +314,7 @@ func (c *config) updatePage(page *model.ComicPageInfo, file *zip.File) (*model.C
 	return page, nil
 }
 func isImage(fileName string) bool {
-	return isJpeg(fileName) || isPng(fileName)
+	return isJpeg(fileName) || isPng(fileName) || isWebp(fileName)
 }
 
 func isJpeg(fileName string) bool {
@@ -327,6 +330,14 @@ func isJpeg(fileName string) bool {
 func isPng(fileName string) bool {
 	switch {
 	case strings.HasSuffix(fileName, ".png"):
+		return true
+	}
+	return false
+}
+
+func isWebp(fileName string) bool {
+	switch {
+	case strings.HasSuffix(fileName, ".webp"):
 		return true
 	}
 	return false
