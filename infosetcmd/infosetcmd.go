@@ -16,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 )
 
@@ -205,6 +206,10 @@ func (cfg *config) inferDoubles(zipFileName string) comicInfoAction {
 			}
 		}
 
+		if pageCount == 0 {
+			return fmt.Errorf("no pages in comic archive")
+		}
+
 		pages := make([]model.ComicPageInfo, pageCount, pageCount)
 
 		// copy data from any existing pages
@@ -225,24 +230,29 @@ func (cfg *config) inferDoubles(zipFileName string) comicInfoAction {
 			pageIndex++
 		}
 
-		// compute average page width and a range with tolerance for double page width
-		var totalWidth int
-		for _, p := range pages {
-			totalWidth = totalWidth + p.ImageWidth
+		// compute median average page width and a range with tolerance for double page width
+		widths := make([]int, len(pages), len(pages))
+		for i, p := range pages {
+			widths[i] = p.ImageWidth
 		}
-		avgWidth := totalWidth / len(pages)
-		avgWidth *= 2 // double average width for double pages
-		loWidth, hiWidth := int(float64(avgWidth)*0.8), int(float64(avgWidth)*1.2)
 
-		fmt.Println("lo/avg/hi", loWidth, "/", avgWidth, "/", hiWidth)
+		sort.Ints(widths)
+		middle := len(widths) / 2
+		doublePageWidth := widths[middle] * 2
+
+		loDoublePageWidth, hiDoublePageWidth := int(float64(doublePageWidth)*0.8), int(float64(doublePageWidth)*1.2)
+
+		fmt.Println("lo/mid/hi", loDoublePageWidth, "/", doublePageWidth, "/", hiDoublePageWidth)
 
 		for i, _ := range pages {
-			if pages[i].ImageWidth >= loWidth && pages[i].ImageWidth <= hiWidth {
+			if pages[i].ImageWidth >= loDoublePageWidth && pages[i].ImageWidth <= hiDoublePageWidth {
 				pages[i].DoublePage = true
 				//fmt.Println(pages[i])
 				fmt.Printf("Computed double page for page %d with width=%d and height=%d\n", i, pages[i].ImageWidth, pages[i].ImageHeight)
 			}
 		}
+
+		info.PageCount = int64(pageCount)
 		info.Pages = pages
 		return nil
 	}
