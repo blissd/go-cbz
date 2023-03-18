@@ -15,7 +15,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"regexp"
 	"strings"
 )
 
@@ -25,8 +24,7 @@ type config struct {
 	// Compute the "pages" array
 	computePages bool
 
-	// Detect double page spreads from file names such as "Page 005-006.jpeg" Implies computePages is true.
-	// TODO fix this as too many comics don't follow this convention.
+	// inferDoublePages compute if a page is double width based on some simple heuristics
 	inferDoublePages bool
 }
 
@@ -64,7 +62,7 @@ func (c *config) exec(_ context.Context, args []string) error {
 	// remove file names from argument list so only metadata name=value pairs are left
 	args = args[:len(args)-len(zipFileNames)]
 
-	actions := make([]comicInfoAction, len(args), len(args)+2) // leave space for Validate and (optional) printXml actions
+	setActions := make([]comicInfoAction, len(args), len(args)+2) // leave space for Validate and (optional) printXml actions
 
 	for i, v := range args {
 		nameAndValue := strings.Split(v, "=")
@@ -75,12 +73,21 @@ func (c *config) exec(_ context.Context, args []string) error {
 		if err != nil {
 			return fmt.Errorf("field %s has invalid value %s: %w", nameAndValue[0], nameAndValue[1], err)
 		}
-		actions[i] = setField(nameAndValue[0], typedValue)
+		setActions[i] = setField(nameAndValue[0], typedValue)
 	}
 
-	action := join(append(actions, validate, c.printXml)) // TODO only add this comicInfoAction with a -v "verbose" flag
-
 	for _, name := range zipFileNames {
+		actions := make([]comicInfoAction, 0, len(setActions)+3)
+		for _, a := range setActions {
+			actions = append(actions, a)
+		}
+
+		if c.inferDoublePages {
+			actions = append(actions, c.inferDoubles(name))
+		}
+
+		action := join(append(actions, validate, c.printXml)) // TODO only add this comicInfoAction with a -v "verbose" flag
+
 		err := c.updateZip(name, action)
 		if err != nil {
 			return fmt.Errorf("failed updating comic archive '%s': %w", name, err)
@@ -131,37 +138,19 @@ func (c *config) applyActions(zipFileName string, action comicInfoAction, output
 	// Will write the ComicInfo.xml file as the last entry of the CBZ archive
 	var info *model.ComicInfo = &model.ComicInfo{}
 
-	// Note any existing page data in the ComicInfo.xml will be lost!
-	pages := make([]model.ComicPageInfo, 0, len(input.File))
-
-	addPage := noopAddPage
-	if c.computePages || c.inferDoublePages {
-		addPage = c.addPage
-	}
-
 	for _, file := range input.File {
 		if file.Name == model.ComicInfoXmlName {
 			info, err = model.Unmarshal(file)
 			if err != nil {
 				return fmt.Errorf("failed to unmarshal ComicInfo.xml: %w", err)
 			}
-		} else {
-			pages, err = addPage(pages, file)
-			if err != nil {
-				return fmt.Errorf("failed to process page file: %w", err)
-			}
-
-			// Copies source file as-is. No-decompression/validation/re-compression.
-			err = outputZip.Copy(file)
-			if err != nil {
-				return fmt.Errorf("failed to add %s: %w", file.Name, err)
-			}
 		}
-	}
 
-	if c.computePages {
-		// TODO only do this if len(info.Pages) is zero? Or can they be merged?
-		info.Pages = pages
+		// Copies source file as-is. No-decompression/validation/re-compression.
+		err = outputZip.Copy(file)
+		if err != nil {
+			return fmt.Errorf("failed to add %s: %w", file.Name, err)
+		}
 	}
 
 	err = action(info)
@@ -191,13 +180,71 @@ type comicInfoAction func(info *model.ComicInfo) error
 
 // printXml is an comicInfoAction that prints the ComicInfo.xml to stdout.
 func (c *config) printXml(info *model.ComicInfo) error {
-	fmt.Fprintln(c.out, info)
+	_, _ = fmt.Fprintln(c.out, info)
 	return nil
 }
 
 // validate is an comicInfoAction that validates a ComicInfo.xml.
 func validate(info *model.ComicInfo) error {
 	return info.Validate()
+}
+
+func (cfg *config) inferDoubles(zipFileName string) comicInfoAction {
+	return func(info *model.ComicInfo) error {
+		input, err := zip.OpenReader(zipFileName)
+		if err != nil {
+			return fmt.Errorf("failed to open input file: %w", err)
+		}
+		defer input.Close()
+
+		var pageCount int
+		for _, file := range input.File {
+			if isImage(file.Name) {
+				pageCount++
+			}
+		}
+
+		pages := make([]model.ComicPageInfo, pageCount, pageCount)
+
+		// copy data from any existing pages
+		pageIndex := 0
+		for _, file := range input.File {
+			if !isImage(file.Name) {
+				continue
+			}
+
+			if pageIndex < len(info.Pages) {
+				pages[pageIndex] = info.Pages[pageIndex]
+			}
+			pages[pageIndex].Image = pageIndex
+			_, err = cfg.updatePage(&pages[pageIndex], file)
+			if err != nil {
+				return fmt.Errorf("failed updating page: %w", err)
+			}
+			pageIndex++
+		}
+
+		// compute average page width and a range with tolerance for double page width
+		var totalWidth int
+		for _, p := range pages {
+			totalWidth = totalWidth + p.ImageWidth
+		}
+		avgWidth := totalWidth / len(pages)
+		avgWidth *= 2 // double average width for double pages
+		loWidth, hiWidth := int(float64(avgWidth)*0.8), int(float64(avgWidth)*1.2)
+
+		fmt.Println("lo/avg/hi", loWidth, "/", avgWidth, "/", hiWidth)
+
+		for i, _ := range pages {
+			if pages[i].ImageWidth >= loWidth && pages[i].ImageWidth <= hiWidth {
+				pages[i].DoublePage = true
+				//fmt.Println(pages[i])
+				fmt.Printf("Computed double page for page %d with width=%d and height=%d\n", i, pages[i].ImageWidth, pages[i].ImageHeight)
+			}
+		}
+		info.Pages = pages
+		return nil
+	}
 }
 
 // join many Actions together into a single comicInfoAction.
@@ -234,72 +281,53 @@ func setField(name string, value any) comicInfoAction {
 	}
 }
 
-// addPage accumulates information about pages to build the Pages.
-type addPage func(pages []model.ComicPageInfo, file *zip.File) ([]model.ComicPageInfo, error)
+func (c *config) updatePage(page *model.ComicPageInfo, file *zip.File) (*model.ComicPageInfo, error) {
+	ir, err := file.Open()
+	if err != nil {
+		return page, fmt.Errorf("failed to open image file '%v': %w", file.Name, err)
+	}
+	defer ir.Close()
 
-func noopAddPage(pages []model.ComicPageInfo, file *zip.File) ([]model.ComicPageInfo, error) {
-	return pages, nil
+	var img image.Image = nil
+
+	switch {
+	case isJpeg(file.Name):
+		img, err = jpeg.Decode(ir)
+	case isPng(file.Name):
+		img, err = png.Decode(ir)
+	}
+
+	if err != nil {
+		return page, fmt.Errorf("failed to decode image '%v': %w", file.Name, err)
+	}
+
+	if img == nil {
+		return page, fmt.Errorf("nil decode for image '%v'", file.Name)
+	}
+
+	page.ImageWidth = img.Bounds().Dx()
+	page.ImageHeight = img.Bounds().Dy()
+
+	return page, nil
+}
+func isImage(fileName string) bool {
+	return isJpeg(fileName) || isPng(fileName)
 }
 
-func (c *config) addPage(pages []model.ComicPageInfo, file *zip.File) ([]model.ComicPageInfo, error) {
-	if file.Name == model.ComicInfoXmlName {
-		return pages, nil
-	}
-
-	isJpeg := false
-	isPng := false
+func isJpeg(fileName string) bool {
 	switch {
-	case strings.HasSuffix(file.Name, ".jpg"):
-		isJpeg = true
-	case strings.HasSuffix(file.Name, ".jpeg"):
-		isJpeg = true
-	case strings.HasSuffix(file.Name, ".png"):
-		isPng = true
+	case strings.HasSuffix(fileName, ".jpg"):
+		return true
+	case strings.HasSuffix(fileName, ".jpeg"):
+		return true
 	}
+	return false
+}
 
-	isImage := isJpeg || isPng
-
-	if isImage {
-		page := model.ComicPageInfo{
-			Image: len(pages),
-			Type:  "Story",
-		}
-
-		ir, err := file.Open()
-		if err != nil {
-			return nil, fmt.Errorf("failed to open image file '%v': %w", file.Name, err)
-		}
-
-		var img image.Image = nil
-
-		switch {
-		case isJpeg:
-			img, err = jpeg.Decode(ir)
-		case isPng:
-			img, err = png.Decode(ir)
-		}
-
-		if err != nil {
-			return nil, fmt.Errorf("failed to decode image '%v': %w", file.Name, err)
-		}
-
-		if img == nil {
-			return nil, fmt.Errorf("nil decode for image '%v'", file.Name)
-		}
-
-		page.ImageWidth = img.Bounds().Dx()
-		page.ImageHeight = img.Bounds().Dy()
-
-		if c.inferDoublePages {
-			// Assume that double spread pages have names containing a hyphen surrounded by numbers
-			match, err := regexp.MatchString("^.*[0-9]-[0-9].*$", file.Name)
-			if err != nil {
-				return nil, fmt.Errorf("failed double-page inference regex: %w", err)
-			}
-			page.DoublePage = match
-		}
-
-		pages = append(pages, page)
+func isPng(fileName string) bool {
+	switch {
+	case strings.HasSuffix(fileName, ".png"):
+		return true
 	}
-	return pages, nil
+	return false
 }
