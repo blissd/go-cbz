@@ -146,6 +146,7 @@ func (c *config) applyActions(zipFileName string, action comicInfoAction, output
 			if err != nil {
 				return fmt.Errorf("failed to unmarshal ComicInfo.xml: %w", err)
 			}
+			continue // don't copy the ComicInfo.xml file as it will be processed and added last.
 		}
 
 		// Copies source file as-is. No-decompression/validation/re-compression.
